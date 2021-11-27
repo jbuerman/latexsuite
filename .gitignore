@@ -3,3 +3,8 @@
 \#*#
 .\#*
 *.pyc
+
+.idea/
+build/
+dist/
+latexsuite.egg-info/
