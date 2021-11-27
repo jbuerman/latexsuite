@@ -12,7 +12,7 @@ setup(
     name="latexsuite",
     version="0.9.0",
     description="Support your bash needs when working with latex projects in git repositories.",
-    long_description="README.md",
+    long_description=(pathlib.Path(__file__).parent / "README.md").read_text(),
     long_description_content_type="text/markdown",
     url="https://github.com/jbuerman/latexsuite",
     author="Jan Buermann",
