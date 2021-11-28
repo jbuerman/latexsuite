@@ -4,6 +4,8 @@ Constants for tests.
 
 from latex_suite import util
 
+TEST_TIMEOUT = 20
+
 SAMPLE_TEX_FILE_NAME = "test_compile_tex_file"
 SAMPLE_BIB_FILE_NAME = "bib_file.bib"
 SAMPLE_TEX_ENGINES = ["pdflatex", "lualatex"]

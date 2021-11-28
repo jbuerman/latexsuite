@@ -7,8 +7,7 @@ import pytest
 
 from latex_suite import latex
 from tests import data
-
-TEST_TIMEOUT = 10
+from tests.data import TEST_TIMEOUT
 
 
 @pytest.fixture(autouse=True, scope='module')
