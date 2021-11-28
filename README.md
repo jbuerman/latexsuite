@@ -1,3 +1,9 @@
+![Test Status](https://github.com/jbuerman/latexsuite/actions/workflows/run-tests.yml/badge.svg)
+
+[![PyPI version](https://badge.fury.io/py/latexsuite.svg)](https://badge.fury.io/py/latexsuite)
+
+[![GitHub license](https://img.shields.io/github/license/jbuerman/latexsuite)](https://github.com/jbuerman/latexsuite/blob/master/LICENSE.md)
+
 # Latex Suite
 
 This suite of little programs is intended to support creating latex documents that are being written in editor
