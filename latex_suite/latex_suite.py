@@ -31,8 +31,9 @@ NO_TEX_FOUND_WARNING = "No_compatible_tex_files_found"
 
 # logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.INFO)
 logging.basicConfig(filename=LOG_FILE, filemode="w",
-                    format=f"[%(levelname)s][%(name)s]"
+                    format="[%(levelname)s][%(name)s]"
                            + f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}] %(message)s")
+logger = logging.getLogger(__name__)
 
 
 class ArgumentParserExtensions:
@@ -130,7 +131,7 @@ def load_settings():
     return Configuration(loaded_config)
 
 
-def compile_one_tex(tex_file, do_bib, is_verbose, num_compile_attempts):
+def compile_one_tex(tex_file, do_bib, is_verbose, num_compile_attempts, do_single_run=False):
     """
     Compile on tex file.
 
@@ -144,10 +145,14 @@ def compile_one_tex(tex_file, do_bib, is_verbose, num_compile_attempts):
         If True print processing.
     :param num_compile_attempts: int
         The maximal number of attempts to try to pass past a latex translation error.
+    :param do_single_run: bool
+        If True and do_bib is False one translation of the tex file.
+        If True and do_bib is True: tex translation, citation processing, tex translation.
     """
     compile_result = make_pdf_with_substitute_defaults(tex_file,
                                                        num_compile_attempts=num_compile_attempts,
-                                                       verbose=is_verbose, do_bib=do_bib)
+                                                       verbose=is_verbose, do_bib=do_bib,
+                                                       do_single_run=do_single_run)
     if compile_result.outcome == latex.Outcome.ABORTED:
         bash.print_error("Failed to compile tex file '" + str(tex_file) + "'.")
         sys.exit(1)
@@ -268,6 +273,8 @@ def task_make(parsed_args, compilable_tex_files):
     do_bib = parsed_args["bib"]
     do_produce_status_list = parsed_args["listStatus"]
     num_compile_attempts = parsed_args["number"]
+    do_double = parsed_args["double"]
+    do_single_run = not do_double
     if parsed_args["all"]:
         if parsed_args["texfile"] != filename_stem(Configuration.get_config().main_tex):
             bash.print_warning("Tex file (" + str(parsed_args["texfile"]) + ")"
@@ -277,7 +284,8 @@ def task_make(parsed_args, compilable_tex_files):
             one_compile_result = make_pdf_with_substitute_defaults(one_tex_file,
                                                                    num_compile_attempts=num_compile_attempts,
                                                                    verbose=is_verbose,
-                                                                   do_bib=do_bib)
+                                                                   do_bib=do_bib,
+                                                                   do_single_run=do_single_run)
             all_compile_results.append(one_compile_result)
             if do_produce_status_list:
                 status = bash.Status.UNKNOWN
@@ -308,7 +316,8 @@ def task_make(parsed_args, compilable_tex_files):
             sys.exit(1)
     else:
         tex_file = parsed_args["texfile"] + ".tex"
-        compile_one_tex(tex_file, do_bib=do_bib, is_verbose=is_verbose, num_compile_attempts=num_compile_attempts)
+        compile_one_tex(tex_file, do_bib=do_bib, is_verbose=is_verbose, num_compile_attempts=num_compile_attempts,
+                        do_single_run=do_single_run)
 
 
 def task_free_compile_cmake(parsed_args):
@@ -390,6 +399,9 @@ def main():
     parent_number_ignore_latex_error.add_argument('-n', '--number', type=int,
                                                   default=config.number_ignore_latex_compile_errors,
                                                   help="The number of attempts to ignore latex errors.")
+    parent_double_translation = ap.ArgumentParser(add_help=False)
+    parent_double_translation.add_argument("-d", "--double", action="store_const", const=True, default=False,
+                                           help="Perform two tex typesetting compilations.")
     # Parsers for tasks
     task_parsers = parser.add_subparsers(dest='task')
     # Make config file
@@ -415,12 +427,13 @@ def main():
     # make_parser =
     task_parsers.add_parser('cmake',
                             parents=[parent_with_tex_file, parent_with_bib, verbose_print,
-                                     parent_number_ignore_latex_error],
+                                     parent_number_ignore_latex_error, parent_double_translation],
                             help='Translate document.')
     # Make pdf
     make_compile_parser = task_parsers.add_parser('make',
                                                   parents=[parent_with_bib, verbose_print,
-                                                           parent_number_ignore_latex_error],
+                                                           parent_number_ignore_latex_error,
+                                                           parent_double_translation],
                                                   help='Translate document.')
     make_compile_parser.add_argument("texfile",
                                      nargs="?",

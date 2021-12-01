@@ -4,6 +4,8 @@ Compiling tex files and processing bibliography (bib) files.
 
 import subprocess
 import sys
+import threading
+import time
 
 import latex_suite.util
 
@@ -169,6 +171,9 @@ class LatexBashCompile(ProcessRunnerWithOutput):
         self._verbose = verbose
         self._warning_progressions = 0
         self._error_progressions = 0
+        self.compile_outcome = None
+        self._end_attempts = 0
+        self._processed_chars = 0
 
     @property
     def num_warnings(self):
@@ -200,11 +205,10 @@ class LatexBashCompile(ProcessRunnerWithOutput):
         :return: LatexBashCompileResult
         The compile result with the outcome, output and number of errors and warnings.
         """
-        compile_outcome = Outcome.SUCCESS
-        end_attempts = 0
         start_of_new_line = True
         potential_file_not_found_idx = 0
         for char in iter(self):
+            self._processed_chars += 1
             if start_of_new_line:
                 if char == "?":
                     self.write_newline()
@@ -212,13 +216,8 @@ class LatexBashCompile(ProcessRunnerWithOutput):
                 elif char == "!":
                     potential_file_not_found_idx = 1
                 elif char == "*":
-                    if end_attempts >= self._max_end_attempts:
-                        self._process.stdin.close()
-                        compile_outcome = Outcome.ABORTED
-                    else:
-                        self.write_end_enter()
-                        end_attempts += 1
-                        self._error_progressions += 1
+                    error_timeout_thread = threading.Thread(target=self.error_checking, args=(self._processed_chars,))
+                    error_timeout_thread.start()
             elif potential_file_not_found_idx > 0:
                 fnf_message = "! I can't find file"
                 if char == fnf_message[potential_file_not_found_idx]:
@@ -227,17 +226,44 @@ class LatexBashCompile(ProcessRunnerWithOutput):
                     potential_file_not_found_idx = 0
                 if potential_file_not_found_idx == len(fnf_message):
                     self._process.stdin.close()
-                    compile_outcome = Outcome.FILE_NOT_FOUND
+                    self.compile_outcome = Outcome.FILE_NOT_FOUND
             start_of_new_line = False
             if char == "\n":
                 start_of_new_line = True
         if self._verbose:
             sys.stdout.write("\n")
         sys.stdout.flush()
-        if (compile_outcome != Outcome.ABORTED
+        if (self.compile_outcome != Outcome.ABORTED
                 and "Fatal error occurred, no output PDF file produced!" in self._total_output):
-            compile_outcome = Outcome.FAILURE
-        return compile_outcome
+            self.compile_outcome = Outcome.FAILURE
+        if self.compile_outcome is None:
+            self.compile_outcome = Outcome.SUCCESS
+        return self.compile_outcome
+
+    def error_checking(self, processed_chars):
+        """
+        Processes a potential error in the tex processing.
+
+        Waits for half a second
+        to see if the error is not an error and if the compiling is still not processing
+        assumes that an error has happened and either tries to process passed the error
+        or if the max number of errors has happened terminates the compilation. The number of processed chars
+        is used as a measure if the compilation is still running.
+
+        :param processed_chars:
+            The number of processed chars a the time of the potential error.
+        """
+        time.sleep(0.5)
+        if self._processed_chars == processed_chars:
+            if self._end_attempts >= self._max_end_attempts:
+                self._process.stdin.close()
+                self.compile_outcome = Outcome.ABORTED
+            else:
+                self.write_end_enter()
+                self._end_attempts += 1
+                self._error_progressions += 1
+        else:
+            pass  # Do nothing since the processing has continued.
 
 
 class LatexBashCompileResult:

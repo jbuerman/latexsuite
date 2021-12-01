@@ -38,7 +38,7 @@ set up for global completion. See argcomplete's
 
 ## Tasks
 
-The suite different capabilities are determined by the first argument the  **task**.
+The suite's different capabilities are determined by the first argument the **task**.
 The different tasks are:
 * make: Typeset the default tex
 * cmake: Typeset any tex
@@ -65,7 +65,8 @@ ___--all___\
     (Not available for cmake.)
 
 ___-b/--bib___\
-&ensp;&ensp;Also process the bibliography.
+&ensp;&ensp;Also process the bibliography. Will process the tex file twice.
+Once before and once after the bibliography file processing.
 
 ___-v/--verbose___\
 &ensp;&ensp;Print the cmd output of the latex and bib engine.
@@ -77,6 +78,10 @@ ___-l/--listStatus___\
 ___-n/--number___\
 &ensp;&ensp;Number of latex error to ignore.
     Override the [number_ignore_latex_compile_errors](#configuration) configuration value for the current run.
+
+___-d/--double___\
+&ensp;&ensp;Translate the tex document twice. If the '--bib' flag is set the file will be translated three times.
+Once before the bibliography processing and twice after.
 
 ### Task: bibfile
 
@@ -239,13 +244,3 @@ values.
             </dl>
         </dd>
 </dl>
-
-# Known Problems
-
-## Messages that start with an asterisk
-
-Some tex files might have an output that starts with an asterisks,
-e.g. "&ast;geometry&ast; driver: auto-detecting". In this case the
-line will be taken like an unclosed environment error. Setting the
-number of errors to process over can circumvent this, e.g.
-"*latexsuite make -n 1*".
