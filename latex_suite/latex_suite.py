@@ -376,7 +376,7 @@ def main():
         logging.getLogger().removeHandler(logging.getLogger().handlers[1])
     compilable_tex_files = util.find_compilable_tex(".")
     if config.main_tex not in compilable_tex_files:
-        compilable_tex_files.append(config.main_tex)
+        logger.warning("Configures main tex file is not detected as compilable.")
     compilable_tex_files_names = [os.path.splitext(f)[0] for f in compilable_tex_files]
     if len(compilable_tex_files_names) == 0:
         compilable_tex_files_names.append(NO_TEX_FOUND_WARNING)
