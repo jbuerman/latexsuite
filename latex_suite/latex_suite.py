@@ -148,21 +148,18 @@ def compile_one_tex(tex_file, do_bib, is_verbose, num_compile_attempts, do_singl
     :param do_single_run: bool
         If True and do_bib is False one translation of the tex file.
         If True and do_bib is True: tex translation, citation processing, tex translation.
-    :return: TypesettingResult
-        The compile result of all compiles with the outcome, output and number of errors and warnings.
-        If the bibliography was processed the bib processing information is included.
     """
     compile_result = make_pdf_with_substitute_defaults(tex_file,
                                                        num_compile_attempts=num_compile_attempts,
                                                        verbose=is_verbose, do_bib=do_bib,
                                                        do_single_run=do_single_run)
-    if compile_result.outcome == latex.Outcome.ABORTED:
+    last_compile_result = next(compile_result)
+    if last_compile_result.outcome == latex.Outcome.ABORTED:
         bash.print_error("Failed to compile tex file '" + str(tex_file) + "'.")
         sys.exit(1)
-    elif compile_result.outcome == latex.Outcome.FILE_NOT_FOUND:
+    elif last_compile_result.outcome == latex.Outcome.FILE_NOT_FOUND:
         bash.print_error("Tex file to compile '" + str(tex_file) + "' not found.")
         sys.exit(2)
-    return compile_result
 
 
 def task_write_conf(parsed_args):
@@ -290,16 +287,17 @@ def task_make(parsed_args, compilable_tex_files):
                                                                    verbose=is_verbose,
                                                                    do_bib=do_bib,
                                                                    do_single_run=do_single_run)
-            all_compile_results.append(one_compile_result)
+            last_compile_result_of_one_compile_result = next(one_compile_result)
+            all_compile_results.append(last_compile_result_of_one_compile_result)
             if do_produce_status_list:
                 status = bash.Status.UNKNOWN
                 status_message = None
-                if one_compile_result.outcome == latex.Outcome.SUCCESS:
+                if last_compile_result_of_one_compile_result.outcome == latex.Outcome.SUCCESS:
                     status = bash.Status.SUCCESS
-                elif one_compile_result.outcome == latex.Outcome.ABORTED:
+                elif last_compile_result_of_one_compile_result.outcome == latex.Outcome.ABORTED:
                     status = bash.Status.ERROR
                     status_message = "ABORTED"
-                elif one_compile_result.outcome == latex.Outcome.FAILURE:
+                elif last_compile_result_of_one_compile_result.outcome == latex.Outcome.FAILURE:
                     status = bash.Status.ERROR
                 bash.print_status(one_tex_file, status, status_message)
 
