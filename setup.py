@@ -10,7 +10,7 @@ with open(path.join(root_dir, 'requirements.txt')) as requirements_file:
 
 setup(
     name="latexsuite",
-    version="0.9.3",
+    version="0.9.4",
     description="Support your bash needs when working with latex projects in git repositories.",
     long_description=(pathlib.Path(__file__).parent / "README.md").read_text(),
     long_description_content_type="text/markdown",
