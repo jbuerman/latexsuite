@@ -102,8 +102,8 @@ def make_pdf_with_substitute_defaults(file_to_translate, num_compile_attempts,
     :param do_single_run: bool
         If True and do_bib is False one translation of the tex file.
         If True and do_bib is True: tex translation, citation processing, tex translation.
-    :return: LatexBashCompileResult
-        The compile result of the last compile with the outcome, output and number of errors and warnings.
+    :return: TypesettingResult
+        The compile result of all compiles with the outcome, output and number of errors and warnings.
         If the bibliography was processed the bib processing information is included.
     """
     engine = Configuration.get_config().engine
@@ -148,6 +148,9 @@ def compile_one_tex(tex_file, do_bib, is_verbose, num_compile_attempts, do_singl
     :param do_single_run: bool
         If True and do_bib is False one translation of the tex file.
         If True and do_bib is True: tex translation, citation processing, tex translation.
+    :return: TypesettingResult
+        The compile result of all compiles with the outcome, output and number of errors and warnings.
+        If the bibliography was processed the bib processing information is included.
     """
     compile_result = make_pdf_with_substitute_defaults(tex_file,
                                                        num_compile_attempts=num_compile_attempts,
@@ -159,6 +162,7 @@ def compile_one_tex(tex_file, do_bib, is_verbose, num_compile_attempts, do_singl
     elif compile_result.outcome == latex.Outcome.FILE_NOT_FOUND:
         bash.print_error("Tex file to compile '" + str(tex_file) + "' not found.")
         sys.exit(2)
+    return compile_result
 
 
 def task_write_conf(parsed_args):

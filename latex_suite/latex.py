@@ -266,17 +266,15 @@ class LatexBashCompile(ProcessRunnerWithOutput):
             pass  # Do nothing since the processing has continued.
 
 
-class LatexBashCompileResult:
+class TypesettingResult:
     """
-    The results of a tex compilation.
+    The result of a complete typesetting process including one or several tex compilations and
+    the bib processing if performed.
     """
 
-    def __init__(self, filename, outcome, output, num_warnings, num_errors):
-        self.filename = filename
-        self.outcome = outcome
-        self.output = output
-        self.num_warnings = num_warnings
-        self.num_errors = num_errors
+    def __init__(self):
+        self._tex_compile_results = []
+        self._result_pos = -1
         self._bib_processing_result = None
 
     @property
@@ -296,6 +294,44 @@ class LatexBashCompileResult:
             The result.
         """
         self._bib_processing_result = result
+
+    def add_compilation_result(self, compilation_result):
+        """
+        Add the result of one tex compilation.
+
+        :param compilation_result: LatexBashCompileResult
+        The result information object.
+        """
+        self._tex_compile_results.append(compilation_result)
+        self._result_pos = len(self) - 1
+
+    def __len__(self):
+        return len(self._tex_compile_results)
+
+    def __iter__(self):
+        self._result_pos = len(self) - 1
+        return self
+
+    def __next__(self):
+        if self._result_pos >= 0:
+            next_result = self._tex_compile_results[self._result_pos]
+        else:
+            raise StopIteration()
+        self._result_pos -= 1
+        return next_result
+
+
+class LatexBashCompileResult:
+    """
+    The results of a tex compilation.
+    """
+
+    def __init__(self, filename, outcome, output, num_warnings, num_errors):
+        self.filename = filename
+        self.outcome = outcome
+        self.output = output
+        self.num_warnings = num_warnings
+        self.num_errors = num_errors
 
 
 class BibBashProcessingResult:
@@ -334,22 +370,24 @@ def make_pdf(file_to_translate, engine, bib_engine, max_end_attempts=1,
     :param do_single_run:
         If True and do_bib is False one translation of the tex file.
         If True and do_bib is True: tex translation, citation processing, tex translation.
-    :return: LatexBashCompileResult
-        The compile result of the last compile with the outcome, output and number of errors and warnings.
+    :return: TypesettingResult
+        The compile result of all compiles with the outcome, output and number of errors and warnings.
         If the bibliography was processed the bib processing information is included.
     """
-    compile_result = None
-    bib_process_result = None
-    if do_bib and not do_single_run or not do_bib and do_single_run or not do_bib and not do_single_run:
-        compile_result = compile_file(engine, file_to_translate, max_end_attempts=max_end_attempts, verbose=verbose)
+    overall_compile_result = TypesettingResult()
+    compile_result = compile_file(engine, file_to_translate, max_end_attempts=max_end_attempts, verbose=verbose)
+    overall_compile_result.add_compilation_result(compile_result)
     if do_bib:
         bib_process_result = compile_bib(bib_engine, file_to_translate, verbose=verbose)
-    if do_bib and not do_single_run:
-        compile_result = compile_file(engine, file_to_translate, max_end_attempts=max_end_attempts, verbose=verbose)
+        overall_compile_result.bib_processing_result = bib_process_result
+        compile_result_after_bib = compile_file(engine, file_to_translate,
+                                                max_end_attempts=max_end_attempts, verbose=verbose)
+        overall_compile_result.add_compilation_result(compile_result_after_bib)
     if not do_single_run:
-        compile_result = compile_file(engine, file_to_translate, max_end_attempts=max_end_attempts, verbose=verbose)
-    compile_result.bib_processing_result = bib_process_result
-    return compile_result
+        compile_result_additional_run = compile_file(engine, file_to_translate,
+                                                     max_end_attempts=max_end_attempts, verbose=verbose)
+        overall_compile_result.add_compilation_result(compile_result_additional_run)
+    return overall_compile_result
 
 
 def compile_bib(engine, bib_parameter, verbose=False):

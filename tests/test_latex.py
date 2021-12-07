@@ -149,3 +149,28 @@ class TestBibBashProcessing:
         assert "I found no \\bibstyle command" in bib_result.output, ("Output should contain info that "
                                                                       + "bib style is not set.")
         assert bib_result.outcome == latex.Outcome.FAILURE, "Processing should be logged as failed."
+
+
+@pytest.mark.timeout(TEST_TIMEOUT)
+def test_make_pdf(tmp_path):
+    os.chdir(tmp_path)
+    tex_file_name = data.SAMPLE_TEX_FILE_NAME + ".tex"
+    tex_content = data.SIMPLE_TEX_DOCUMENT_WITH_CITATION_BIBTEX
+    TestBibBashProcessing.create_tex_and_bib(tmp_path, tex_file_name, tex_content,
+                                             data.SAMPLE_BIB_FILE_NAME, data.FIRST_BIB_FILE_CONTENT)
+    result = latex.make_pdf(tex_file_name, "pdflatex", "bibtex", do_bib=False, do_single_run=False)
+    assert len(result) == 2, "Should compile twice."
+    assert result.bib_processing_result is None, "Bib should not have been processed."
+    assert all([r.outcome == 0 for r in result]), "Both compiles should be successful."
+    result = latex.make_pdf(tex_file_name, "pdflatex", "bibtex", do_bib=False, do_single_run=True)
+    assert len(result) == 1, "Only one compilation should have happened."
+    assert result.bib_processing_result is None, "Bib should not have been processed."
+    assert next(result).outcome == latex.Outcome.SUCCESS, "Compile should be successful."
+    result = latex.make_pdf(tex_file_name, "pdflatex", "bibtex", do_bib=True, do_single_run=True)
+    assert len(result) == 2, "Should compile before and after bib processing."
+    assert result.bib_processing_result is not None, "Bib should have been processed."
+    assert all([r.outcome == 0 for r in result]), "Both compiles should be successful."
+    result = latex.make_pdf(tex_file_name, "pdflatex", "bibtex", do_bib=True, do_single_run=False)
+    assert len(result) == 3, "Should compile once before and twice after bib processing."
+    assert result.bib_processing_result is not None, "Bib should have been processed."
+    assert all([r.outcome == 0 for r in result]), "All three compiles should be successful."
