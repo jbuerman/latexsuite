@@ -21,7 +21,9 @@ def get_all_references_from_aux(aux_file_path):
     with open(aux_file_path, "r") as aux_file:
         for line in aux_file:
             if line.startswith("\\abx@aux@cite") or line.startswith("\\citation"):
-                reference = line.strip().replace("\\abx@aux@cite{", "").replace("\\citation{", "").replace("}", "")
+                reference_args = line.strip().replace("\\abx@aux@cite", "").replace("\\citation", "")
+                reference_last_arg = reference_args.split("}{")[-1]
+                reference = reference_last_arg.replace("{", "").replace("}", "")
                 for one_reference in reference.split(","):
                     all_references.add(one_reference)
     return all_references
