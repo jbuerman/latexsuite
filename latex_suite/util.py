@@ -51,7 +51,7 @@ class Configuration:
         "main_bibliography_file": ("main_bibliography_file", "bibliography.bib"),
         "bibliography_fields_to_remove": ("bibliography_fields_to_remove", ["abstract", "file", "keywords", "url"]),
         "number_ignore_latex_compile_errors": ("number_ignore_latex_compile_errors", 1),
-        "log_to_console": ("log_to_console", False),
+        "log_to_console": ("log_to_console", True),
         "language_errors": ("language_errors",
                             ErrorList([
                                 TextErrorType("'An' not in front of vowel.", r"[\.\ ][aA]n\ [^aeiouAEIOU]"),

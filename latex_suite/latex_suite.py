@@ -15,6 +15,7 @@ import yaml
 
 import argparse as ap
 import argcomplete
+import pybtex.errors
 
 import latex_suite.bibliography as bibliography
 from latex_suite.git import GitInteraction
@@ -24,16 +25,31 @@ from latex_suite import bash_print as bash
 import latex_suite.util as util
 from latex_suite.util import Configuration, filename_stem
 
+DEBUG = False
+
 CONF_FILE = "latex_suite.yaml"
 LOG_FILE = "latex_suite.log"
 NO_TEX_FOUND_WARNING = "No_compatible_tex_files_found"
 
 
 # logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.INFO)
-logging.basicConfig(filename=LOG_FILE, filemode="w",
-                    format="[%(levelname)s][%(name)s]"
-                           + f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}] %(message)s")
+# logging.basicConfig(filename=LOG_FILE, filemode="w",
+#                     format="[%(levelname)s][%(name)s]"
+#                            + f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}] %(message)s")
 logger = logging.getLogger(__name__)
+
+file_logger = logging.FileHandler(LOG_FILE, delay=True)
+file_logger.setLevel(logging.INFO)
+logger.addHandler(file_logger)
+format_file_logger = logging.Formatter("[%(levelname)s][%(name)s]"
+                                       + f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}] %(message)s")
+file_logger.setFormatter(format_file_logger)
+
+stdout_logger = logging.StreamHandler(sys.stdout)
+stdout_logger.setLevel(logging.INFO)
+format_stdout_logger = logging.Formatter('%(message)s')
+stdout_logger.setFormatter(format_stdout_logger)
+logger.addHandler(stdout_logger)
 
 
 class ArgumentParserExtensions:
@@ -369,17 +385,16 @@ def main():
     the task selector function to perform one of the tasks.
     """
     parser = ap.ArgumentParser()
-    root_logger = logging.getLogger()
-    root_logger.handlers.append(logging.StreamHandler(sys.stdout))
     config = load_settings()
     if not config.log_to_console:
-        logging.getLogger().removeHandler(logging.getLogger().handlers[1])
-    compilable_tex_files = util.find_compilable_tex(".")
+        logging.getLogger().removeHandler(stdout_logger)
+    compilable_tex_files = util.find_compilable_tex(".")  # TODO Make it possible to specify a general working directory
     if config.main_tex not in compilable_tex_files:
-        logger.warning("Configures main tex file is not detected as compilable.")
+        logger.warning("Configured main tex file is not detected as compilable.")
     compilable_tex_files_names = [os.path.splitext(f)[0] for f in compilable_tex_files]
     if len(compilable_tex_files_names) == 0:
         compilable_tex_files_names.append(NO_TEX_FOUND_WARNING)
+    pybtex.errors.set_strict_mode(False)
     # Reusable arguments
     parent_with_tex_file = ap.ArgumentParser(add_help=False)
     parent_with_tex_file.add_argument("--maintex",
@@ -484,9 +499,25 @@ def main():
     args = parser.parse_args()
     args = vars(args)
     if args["task"] is not None:
+
         select_task(args, compilable_tex_files)
     else:
         parser.print_help()
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """
+    Log any exception which is not a KeyboardInterrupt.
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    else:
+        logger.error(f"Uncaught exception: type '{exc_type}', value '{exc_value}'")
+
+
+# If not in debug mode log uncaught exceptions.
+if not DEBUG:
+    sys.excepthook = handle_exception
 
 
 if __name__ == '__main__':

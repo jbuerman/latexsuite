@@ -3,9 +3,12 @@ Creation of bibliography (bib) file with required entries subset of all bib entr
 """
 
 import os
+import logging
 
+import pybtex.scanner
 from pybtex import database as bib_parser
 
+logger = logging.getLogger(__name__)
 
 def get_all_references_from_aux(aux_file_path):
     """
@@ -49,19 +52,26 @@ def add_entries_from_file(citation_keys, bib_folder_path, bib_db, fields_to_remo
     """
     for one_file in os.listdir(bib_folder_path):
         if one_file.endswith(".bib"):
-            bib_file_bib_db = bib_parser.parse_file(os.path.join(bib_folder_path, one_file))
-            for key, entry in bib_file_bib_db.entries.items():
-                try:
-                    if key in citation_keys:
-                        for one_field_to_remove in fields_to_remove:
-                            if one_field_to_remove in entry.fields:
-                                entry.fields.pop(one_field_to_remove)
-                        for field_key in list(entry.fields.keys()):
-                            if "\\&" in entry.fields[field_key]:
-                                entry.fields[field_key] = entry.fields[field_key].replace("\\&", "&")
-                        bib_db.add_entry(key, entry)
-                except bib_parser.BibliographyDataError as ex_bib:
-                    errors_list.append(ex_bib)
+            one_file_full_path = os.path.join(bib_folder_path, one_file)
+            try:
+                bib_file_bib_db = bib_parser.parse_file(one_file_full_path)
+            except pybtex.scanner.TokenRequired as ex_token:
+                errors_list.append(ex_token)
+                bib_file_bib_db = None
+                logger.warning(ex_token)
+            if bib_file_bib_db is not None:
+                for key, entry in bib_file_bib_db.entries.items():
+                    try:
+                        if key in citation_keys:
+                            for one_field_to_remove in fields_to_remove:
+                                if one_field_to_remove in entry.fields:
+                                    entry.fields.pop(one_field_to_remove)
+                            for field_key in list(entry.fields.keys()):
+                                if "\\&" in entry.fields[field_key]:
+                                    entry.fields[field_key] = entry.fields[field_key].replace("\\&", "&")
+                            bib_db.add_entry(key, entry)
+                    except bib_parser.BibliographyDataError as ex_bib:
+                        errors_list.append(ex_bib)
 
 
 def create_bib_file(aux_file_path, bib_folder_path, out_file_path, fields_to_remove=None):
